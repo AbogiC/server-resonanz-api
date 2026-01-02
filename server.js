@@ -5,7 +5,7 @@ const cors = require("cors");
 const os = require("os");
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Get local IP addresses
 function getLocalIPs() {
