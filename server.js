@@ -1,14 +1,8 @@
-const https = require("https");
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const cors = require("cors");
 const os = require("os");
-
-const SSL_CONFIG = {
-  key: fs.readFileSync('./ssl/key.pem'),
-  cert: fs.readFileSync('./ssl/cert.pem')
-};
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -91,7 +85,7 @@ app.get("/api/myfiles", (req, res) => {
             return {
               name: file,
               path: `/api/myfiles/${encodeURIComponent(file)}`,
-              url: `https://${req.headers.host}/api/myfiles/${encodeURIComponent(
+              url: `http://${req.headers.host}/api/myfiles/${encodeURIComponent(
                 file
               )}`,
               size: stats.size,
@@ -451,7 +445,7 @@ app.get("/web", (req, res) => {
     <script>
       // Display server URLs
       const serverInfo = document.getElementById('serverInfo');
-      const protocol = 'https';
+      const protocol = window.location.protocol;
       const hostname = window.location.hostname;
       const port = window.location.port;
       
@@ -629,7 +623,7 @@ function formatBytes(bytes, decimals = 2) {
 }
 
 // Start server
-const server = https.createServer(SSL_CONFIG, app).listen(PORT, CONFIG.host, () => {
+const server = app.listen(PORT, CONFIG.host, () => {
   const localIPs = getLocalIPs();
 
   console.log("\n" + "=".repeat(60));
