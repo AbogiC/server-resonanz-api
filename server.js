@@ -1,8 +1,14 @@
+const https = require("https");
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const cors = require("cors");
 const os = require("os");
+
+const SSL_CONFIG = {
+  key: fs.readFileSync('./ssl/key.pem'),
+  cert: fs.readFileSync('./ssl/cert.pem')
+};
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -85,7 +91,9 @@ app.get("/api/myfiles", (req, res) => {
             return {
               name: file,
               path: `/api/myfiles/${encodeURIComponent(file)}`,
-              url: `http://${req.headers.host}/api/myfiles/${encodeURIComponent(file)}`,
+              url: `https://${req.headers.host}/api/myfiles/${encodeURIComponent(
+                file
+              )}`,
               size: stats.size,
               sizeFormatted: formatBytes(stats.size),
               lastModified: stats.mtime,
@@ -443,7 +451,7 @@ app.get("/web", (req, res) => {
     <script>
       // Display server URLs
       const serverInfo = document.getElementById('serverInfo');
-      const protocol = window.location.protocol;
+      const protocol = 'https';
       const hostname = window.location.hostname;
       const port = window.location.port;
       
@@ -621,7 +629,7 @@ function formatBytes(bytes, decimals = 2) {
 }
 
 // Start server
-const server = app.listen(PORT, CONFIG.host, () => {
+const server = https.createServer(SSL_CONFIG, app).listen(PORT, CONFIG.host, () => {
   const localIPs = getLocalIPs();
 
   console.log("\n" + "=".repeat(60));
@@ -643,7 +651,7 @@ const server = app.listen(PORT, CONFIG.host, () => {
   console.log("\n🔧 API ENDPOINTS:");
   console.log("   List files: http://localhost:" + PORT + "/api/myfiles");
   console.log(
-    "   File:       http://localhost:" + PORT + "/api/myfiles/{filename}",
+    "   File:       http://localhost:" + PORT + "/api/myfiles/{filename}"
   );
   console.log("   Browse:     http://localhost:" + PORT + "/api/browse/");
   console.log("   Server info: http://localhost:" + PORT + "/api/info");
