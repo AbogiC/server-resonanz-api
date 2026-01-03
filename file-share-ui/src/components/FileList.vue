@@ -229,215 +229,203 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+<script>
 import axios from 'axios'
 import FilePreview from './FilePreview.vue'
 
-const props = defineProps({
-  apiUrl: {
-    type: String,
-    default: 'http://localhost:3000/api',
+export default {
+  components: {
+    FilePreview,
   },
-})
-
-// State
-const files = ref([])
-const loading = ref(true)
-const error = ref(null)
-const searchQuery = ref('')
-const viewMode = ref('grid')
-const previewVisible = ref(false)
-const selectedFile = ref(null)
-const sortField = ref('name')
-const sortDirection = ref('asc')
-const folderPath = ref('')
-
-// Computed
-const filteredFiles = computed(() => {
-  let filtered = files.value
-
-  // Apply search filter
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    filtered = filtered.filter((file) => file.name.toLowerCase().includes(query))
-  }
-
-  // Apply sorting
-  filtered = [...filtered].sort((a, b) => {
-    let aVal = a[sortField.value]
-    let bVal = b[sortField.value]
-
-    // Handle date strings
-    if (sortField.value === 'lastModified') {
-      aVal = new Date(aVal).getTime()
-      bVal = new Date(bVal).getTime()
-    }
-
-    if (aVal < bVal) return sortDirection.value === 'asc' ? -1 : 1
-    if (aVal > bVal) return sortDirection.value === 'asc' ? 1 : -1
-    return 0
-  })
-
-  return filtered
-})
-
-const totalSize = computed(() => {
-  return files.value.reduce((sum, file) => sum + file.size, 0)
-})
-
-// Methods
-async function fetchFiles() {
-  loading.value = true
-  error.value = null
-
-  try {
-    const response = await axios.get(`${props.apiUrl}/myfiles`)
-
-    if (response.data && response.data.files) {
-      files.value = response.data.files
-      folderPath.value = response.data.folder
-    } else {
-      files.value = []
-    }
-  } catch (err) {
-    console.error('Failed to fetch files:', err)
-    error.value = err.message || 'Failed to connect to server'
-    files.value = []
-  } finally {
-    loading.value = false
-  }
-}
-
-function refreshFiles() {
-  fetchFiles()
-}
-
-function sortBy(field) {
-  if (sortField.value === field) {
-    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
-  } else {
-    sortField.value = field
-    sortDirection.value = 'asc'
-  }
-}
-
-function openPreview(file) {
-  selectedFile.value = file
-  previewVisible.value = true
-}
-
-function closePreview() {
-  previewVisible.value = false
-  selectedFile.value = null
-}
-
-function prevFile(file) {
-  const currentIndex = files.value.findIndex((f) => f.name === file.name)
-  if (currentIndex > 0) {
-    selectedFile.value = files.value[currentIndex - 1]
-  }
-}
-
-function nextFile(file) {
-  const currentIndex = files.value.findIndex((f) => f.name === file.name)
-  if (currentIndex < files.value.length - 1) {
-    selectedFile.value = files.value[currentIndex + 1]
-  }
-}
-
-function downloadFile(file) {
-  const url = `${props.apiUrl}/myfiles/${encodeURIComponent(file.name)}`
-  window.open(url, '_blank')
-}
-
-function formatBytes(bytes) {
-  if (bytes === 0) return '0 Bytes'
-  const k = 1024
-  const sizes = ['Bytes', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-}
-
-function formatDate(dateString) {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffTime = Math.abs(now - date)
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-
-  if (diffDays === 1) return 'Yesterday'
-  if (diffDays < 7) return `${diffDays} days ago`
-
-  return date.toLocaleDateString()
-}
-
-function truncateFileName(name, maxLength = 20) {
-  if (name.length <= maxLength) return name
-  const extIndex = name.lastIndexOf('.')
-  if (extIndex === -1) return name.substring(0, maxLength) + '...'
-
-  const ext = name.substring(extIndex)
-  const nameWithoutExt = name.substring(0, extIndex)
-  const truncatedName = nameWithoutExt.substring(0, maxLength - ext.length - 3) + '...'
-  return truncatedName + ext
-}
-
-function getFileIcon(filename) {
-  const ext = filename.split('.').pop().toLowerCase()
-  const icons = {
-    pdf: '📕',
-    jpg: '🖼️',
-    jpeg: '🖼️',
-    png: '🖼️',
-    gif: '🖼️',
-    bmp: '🖼️',
-    webp: '🖼️',
-    txt: '📄',
-    doc: '📝',
-    docx: '📝',
-    xls: '📊',
-    xlsx: '📊',
-    mp4: '🎬',
-    avi: '🎬',
-    mov: '🎬',
-    webm: '🎬',
-    mp3: '🎵',
-    wav: '🎵',
-    ogg: '🎵',
-    zip: '📦',
-    rar: '📦',
-    '7z': '📦',
-    exe: '⚙️',
-    msi: '⚙️',
-    default: '📁',
-  }
-  return icons[ext] || icons.default
-}
-
-function getFileType(filename) {
-  const ext = filename.split('.').pop().toUpperCase()
-  return ext || 'FILE'
-}
-
-// Lifecycle
-onMounted(() => {
-  fetchFiles()
-
-  // Auto-refresh every 30 seconds
-  setInterval(() => {
-    if (!previewVisible.value) {
-      fetchFiles()
-    }
-  }, 30000)
-})
-
-// Watch for API URL changes
-watch(
-  () => props.apiUrl,
-  () => {
-    fetchFiles()
+  props: {
+    apiUrl: {
+      type: String,
+      default: 'http://localhost:3000/api',
+    },
   },
-)
+  data() {
+    return {
+      files: [],
+      loading: true,
+      error: null,
+      searchQuery: '',
+      viewMode: 'grid',
+      previewVisible: false,
+      selectedFile: null,
+      sortField: 'name',
+      sortDirection: 'asc',
+      folderPath: '',
+    }
+  },
+  computed: {
+    filteredFiles() {
+      let filtered = this.files
+
+      // Apply search filter
+      if (this.searchQuery) {
+        const query = this.searchQuery.toLowerCase()
+        filtered = filtered.filter((file) => file.name.toLowerCase().includes(query))
+      }
+
+      // Apply sorting
+      filtered = [...filtered].sort((a, b) => {
+        let aVal = a[this.sortField]
+        let bVal = b[this.sortField]
+
+        // Handle date strings
+        if (this.sortField === 'lastModified') {
+          aVal = new Date(aVal).getTime()
+          bVal = new Date(bVal).getTime()
+        }
+
+        if (aVal < bVal) return this.sortDirection === 'asc' ? -1 : 1
+        if (aVal > bVal) return this.sortDirection === 'asc' ? 1 : -1
+        return 0
+      })
+
+      return filtered
+    },
+    totalSize() {
+      return this.files.reduce((sum, file) => sum + file.size, 0)
+    },
+  },
+  methods: {
+    async fetchFiles() {
+      this.loading = true
+      this.error = null
+
+      try {
+        const response = await axios.get(`${this.apiUrl}/myfiles`)
+
+        if (response.data && response.data.files) {
+          this.files = response.data.files
+          this.folderPath = response.data.folder
+        } else {
+          this.files = []
+        }
+      } catch (err) {
+        console.error('Failed to fetch files:', err)
+        this.error = err.message || 'Failed to connect to server'
+        this.files = []
+      } finally {
+        this.loading = false
+      }
+    },
+    refreshFiles() {
+      this.fetchFiles()
+    },
+    sortBy(field) {
+      if (this.sortField === field) {
+        this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc'
+      } else {
+        this.sortField = field
+        this.sortDirection = 'asc'
+      }
+    },
+    openPreview(file) {
+      this.selectedFile = file
+      this.previewVisible = true
+    },
+    closePreview() {
+      this.previewVisible = false
+      this.selectedFile = null
+    },
+    prevFile(file) {
+      const currentIndex = this.files.findIndex((f) => f.name === file.name)
+      if (currentIndex > 0) {
+        this.selectedFile = this.files[currentIndex - 1]
+      }
+    },
+    nextFile(file) {
+      const currentIndex = this.files.findIndex((f) => f.name === file.name)
+      if (currentIndex < this.files.length - 1) {
+        this.selectedFile = this.files[currentIndex + 1]
+      }
+    },
+    downloadFile(file) {
+      const url = `${this.apiUrl}/myfiles/${encodeURIComponent(file.name)}`
+      window.open(url, '_blank')
+    },
+    formatBytes(bytes) {
+      if (bytes === 0) return '0 Bytes'
+      const k = 1024
+      const sizes = ['Bytes', 'KB', 'MB', 'GB']
+      const i = Math.floor(Math.log(bytes) / Math.log(k))
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+    },
+    formatDate(dateString) {
+      const date = new Date(dateString)
+      const now = new Date()
+      const diffTime = Math.abs(now - date)
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+      if (diffDays === 1) return 'Yesterday'
+      if (diffDays < 7) return `${diffDays} days ago`
+
+      return date.toLocaleDateString()
+    },
+    truncateFileName(name, maxLength = 20) {
+      if (name.length <= maxLength) return name
+      const extIndex = name.lastIndexOf('.')
+      if (extIndex === -1) return name.substring(0, maxLength) + '...'
+
+      const ext = name.substring(extIndex)
+      const nameWithoutExt = name.substring(0, extIndex)
+      const truncatedName = nameWithoutExt.substring(0, maxLength - ext.length - 3) + '...'
+      return truncatedName + ext
+    },
+    getFileIcon(filename) {
+      const ext = filename.split('.').pop().toLowerCase()
+      const icons = {
+        pdf: '📕',
+        jpg: '🖼️',
+        jpeg: '🖼️',
+        png: '🖼️',
+        gif: '🖼️',
+        bmp: '🖼️',
+        webp: '🖼️',
+        txt: '📄',
+        doc: '📝',
+        docx: '📝',
+        xls: '📊',
+        xlsx: '📊',
+        mp4: '🎬',
+        avi: '🎬',
+        mov: '🎬',
+        webm: '🎬',
+        mp3: '🎵',
+        wav: '🎵',
+        ogg: '🎵',
+        zip: '📦',
+        rar: '📦',
+        '7z': '📦',
+        exe: '⚙️',
+        msi: '⚙️',
+        default: '📁',
+      }
+      return icons[ext] || icons.default
+    },
+    getFileType(filename) {
+      const ext = filename.split('.').pop().toUpperCase()
+      return ext || 'FILE'
+    },
+  },
+  mounted() {
+    this.fetchFiles()
+
+    // Auto-refresh every 30 seconds
+    setInterval(() => {
+      if (!this.previewVisible) {
+        this.fetchFiles()
+      }
+    }, 30000)
+  },
+  watch: {
+    apiUrl() {
+      this.fetchFiles()
+    },
+  },
+}
 </script>
 
 <style scoped>

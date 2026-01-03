@@ -65,7 +65,7 @@
           <p>Preview not available for this file type</p>
           <p class="file-info">
             Size: {{ formatBytes(currentFile.size) }}<br />
-            Type: {{ currentFile.name.split('.').pop()?.toUpperCase() }}
+            Type: {{ (currentFile.name.split('.').pop() || '').toUpperCase() }}
           </p>
           <button @click="downloadFile" class="btn-primary">⬇️ Download File</button>
         </div>
@@ -97,156 +97,159 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+<script>
 import axios from 'axios'
 
-const props = defineProps({
-  visible: Boolean,
-  currentFile: Object,
-  files: Array,
-  apiBaseUrl: {
-    type: String,
-    default: 'http://localhost:3000/api',
+export default {
+  props: {
+    visible: Boolean,
+    currentFile: Object,
+    files: Array,
+    apiBaseUrl: {
+      type: String,
+      default: 'http://localhost:3000/api',
+    },
   },
-})
-
-const emit = defineEmits(['close', 'prev', 'next'])
-
-const isLoading = ref(true)
-const fileContent = ref('')
-const fileUrl = computed(() => {
-  if (!props.currentFile) return ''
-  return `${props.apiBaseUrl}/myfiles/${encodeURIComponent(props.currentFile.name)}`
-})
-
-const currentIndex = computed(() => {
-  return props.files.findIndex((f) => f.name === props.currentFile?.name)
-})
-
-// File type detection
-const isPDF = computed(() => props.currentFile?.name.toLowerCase().endsWith('.pdf'))
-const isImage = computed(() => {
-  const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
-  return imageExts.some((ext) => props.currentFile?.name.toLowerCase().endsWith(ext))
-})
-const isText = computed(() => props.currentFile?.name.toLowerCase().endsWith('.txt'))
-const isVideo = computed(() => {
-  const videoExts = ['.mp4', '.webm', '.avi', '.mov']
-  return videoExts.some((ext) => props.currentFile?.name.toLowerCase().endsWith(ext))
-})
-const isAudio = computed(() => {
-  const audioExts = ['.mp3', '.wav', '.ogg']
-  return audioExts.some((ext) => props.currentFile?.name.toLowerCase().endsWith(ext))
-})
-
-// Methods
-function closePreview() {
-  emit('close')
-}
-
-function prevFile() {
-  if (currentIndex.value > 0) {
-    emit('prev', props.files[currentIndex.value - 1])
-  }
-}
-
-function nextFile() {
-  if (currentIndex.value < props.files.length - 1) {
-    emit('next', props.files[currentIndex.value + 1])
-  }
-}
-
-function downloadFile() {
-  window.open(fileUrl.value, '_blank')
-}
-
-function formatBytes(bytes) {
-  if (bytes === 0) return '0 Bytes'
-  const k = 1024
-  const sizes = ['Bytes', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-}
-
-function formatDate(dateString) {
-  const date = new Date(dateString)
-  return (
-    date.toLocaleDateString() +
-    ' ' +
-    date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  )
-}
-
-function getFileIcon(filename) {
-  const ext = filename.split('.').pop().toLowerCase()
-  const icons = {
-    pdf: '📕',
-    jpg: '🖼️',
-    jpeg: '🖼️',
-    png: '🖼️',
-    gif: '🖼️',
-    txt: '📄',
-    doc: '📝',
-    docx: '📝',
-    xls: '📊',
-    xlsx: '📊',
-    mp4: '🎬',
-    avi: '🎬',
-    mov: '🎬',
-    mp3: '🎵',
-    wav: '🎵',
-    zip: '📦',
-    rar: '📦',
-    exe: '⚙️',
-    default: '📁',
-  }
-  return icons[ext] || icons.default
-}
-
-function handleImageError() {
-  isLoading.value = false
-  // Could show error state here
-}
-
-// Watch for file changes
-watch(
-  () => props.currentFile,
-  () => {
-    isLoading.value = true
-    fileContent.value = ''
-
-    // Load text content for text files
-    if (isText.value && props.currentFile) {
-      axios
-        .get(fileUrl.value, { responseType: 'text' })
-        .then((response) => {
-          fileContent.value = response.data
-          isLoading.value = false
-        })
-        .catch(() => {
-          isLoading.value = false
-        })
+  data() {
+    return {
+      isLoading: true,
+      fileContent: '',
     }
   },
-  { immediate: true },
-)
+  computed: {
+    fileUrl() {
+      if (!this.currentFile) return ''
+      return `${this.apiBaseUrl}/myfiles/${encodeURIComponent(this.currentFile.name)}`
+    },
+    currentIndex() {
+      return this.files.findIndex((f) => f.name === (this.currentFile && this.currentFile.name))
+    },
+    isPDF() {
+      return this.currentFile && this.currentFile.name.toLowerCase().endsWith('.pdf')
+    },
+    isImage() {
+      const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
+      return imageExts.some(
+        (ext) => this.currentFile && this.currentFile.name.toLowerCase().endsWith(ext)
+      )
+    },
+    isText() {
+      return this.currentFile && this.currentFile.name.toLowerCase().endsWith('.txt')
+    },
+    isVideo() {
+      const videoExts = ['.mp4', '.webm', '.avi', '.mov']
+      return videoExts.some(
+        (ext) => this.currentFile && this.currentFile.name.toLowerCase().endsWith(ext)
+      )
+    },
+    isAudio() {
+      const audioExts = ['.mp3', '.wav', '.ogg']
+      return audioExts.some(
+        (ext) => this.currentFile && this.currentFile.name.toLowerCase().endsWith(ext)
+      )
+    },
+  },
+  methods: {
+    closePreview() {
+      this.$emit('close')
+    },
+    prevFile() {
+      if (this.currentIndex > 0) {
+        this.$emit('prev', this.files[this.currentIndex - 1])
+      }
+    },
+    nextFile() {
+      if (this.currentIndex < this.files.length - 1) {
+        this.$emit('next', this.files[this.currentIndex + 1])
+      }
+    },
+    downloadFile() {
+      window.open(this.fileUrl, '_blank')
+    },
+    formatBytes(bytes) {
+      if (bytes === 0) return '0 Bytes'
+      const k = 1024
+      const sizes = ['Bytes', 'KB', 'MB', 'GB']
+      const i = Math.floor(Math.log(bytes) / Math.log(k))
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+    },
+    formatDate(dateString) {
+      const date = new Date(dateString)
+      return (
+        date.toLocaleDateString() +
+        ' ' +
+        date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      )
+    },
+    getFileIcon(filename) {
+      const ext = filename.split('.').pop().toLowerCase()
+      const icons = {
+        pdf: '📕',
+        jpg: '🖼️',
+        jpeg: '🖼️',
+        png: '🖼️',
+        gif: '🖼️',
+        txt: '📄',
+        doc: '📝',
+        docx: '📝',
+        xls: '📊',
+        xlsx: '📊',
+        mp4: '🎬',
+        avi: '🎬',
+        mov: '🎬',
+        mp3: '🎵',
+        wav: '🎵',
+        zip: '📦',
+        rar: '📦',
+        exe: '⚙️',
+        default: '📁',
+      }
+      return icons[ext] || icons.default
+    },
+    handleImageError() {
+      this.isLoading = false
+      // Could show error state here
+    },
+  },
+  watch: {
+    currentFile: {
+      handler() {
+        this.isLoading = true
+        this.fileContent = ''
 
-// Keyboard navigation
-onMounted(() => {
-  const handleKeydown = (e) => {
-    if (!props.visible) return
-    if (e.key === 'Escape') closePreview()
-    if (e.key === 'ArrowLeft') prevFile()
-    if (e.key === 'ArrowRight') nextFile()
-  }
+        // Load text content for text files
+        if (this.isText && this.currentFile) {
+          axios
+            .get(this.fileUrl, { responseType: 'text' })
+            .then((response) => {
+              this.fileContent = response.data
+              this.isLoading = false
+            })
+            .catch(() => {
+              this.isLoading = false
+            })
+        }
+      },
+      immediate: true,
+    },
+  },
+  mounted() {
+    const handleKeydown = (e) => {
+      if (!this.visible) return
+      if (e.key === 'Escape') this.closePreview()
+      if (e.key === 'ArrowLeft') this.prevFile()
+      if (e.key === 'ArrowRight') this.nextFile()
+    }
 
-  window.addEventListener('keydown', handleKeydown)
-
-  return () => {
-    window.removeEventListener('keydown', handleKeydown)
-  }
-})
+    window.addEventListener('keydown', handleKeydown)
+    this._keydownHandler = handleKeydown
+  },
+  beforeDestroy() {
+    if (this._keydownHandler) {
+      window.removeEventListener('keydown', this._keydownHandler)
+    }
+  },
+}
 </script>
 
 <style scoped>

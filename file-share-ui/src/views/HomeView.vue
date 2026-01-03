@@ -4,6 +4,12 @@
   </div>
 </template>
 
-<script setup>
+<script>
 import FileList from '@/components/FileList.vue'
+
+export default {
+  components: {
+    FileList,
+  },
+}
 </script>

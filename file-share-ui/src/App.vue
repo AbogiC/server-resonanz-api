@@ -77,55 +77,60 @@
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue'
+<script>
 import FileList from './components/FileList.vue'
 import axios from 'axios'
 
-const apiUrl = ref('http://localhost:3000/api')
-const connectionStatus = ref(null)
-const serverInfo = ref(null)
-
-// Test server connection
-async function testConnection() {
-  connectionStatus.value = { type: 'info', message: 'Testing connection...' }
-
-  try {
-    const response = await axios.get(apiUrl.value + '/info', { timeout: 5000 })
-    serverInfo.value = response.data
-    connectionStatus.value = {
-      type: 'success',
-      message: `Connected to ${response.data.name} v${response.data.version}`,
+export default {
+  components: {
+    FileList,
+  },
+  data() {
+    return {
+      apiUrl: 'http://localhost:3000/api',
+      connectionStatus: null,
+      serverInfo: null,
     }
-  } catch (error) {
-    connectionStatus.value = {
-      type: 'error',
-      message: `Failed to connect: ${error.message}`,
-    }
-    serverInfo.value = null
-  }
+  },
+  methods: {
+    async testConnection() {
+      this.connectionStatus = { type: 'info', message: 'Testing connection...' }
 
-  // Clear status after 5 seconds
-  setTimeout(() => {
-    connectionStatus.value = null
-  }, 5000)
+      try {
+        const response = await axios.get(this.apiUrl + '/info', { timeout: 5000 })
+        this.serverInfo = response.data
+        this.connectionStatus = {
+          type: 'success',
+          message: `Connected to ${response.data.name} v${response.data.version}`,
+        }
+      } catch (error) {
+        this.connectionStatus = {
+          type: 'error',
+          message: `Failed to connect: ${error.message}`,
+        }
+        this.serverInfo = null
+      }
+
+      // Clear status after 5 seconds
+      setTimeout(() => {
+        this.connectionStatus = null
+      }, 5000)
+    },
+    getPortFromUrl(url) {
+      try {
+        const urlObj = new URL(url)
+        return urlObj.port || (urlObj.protocol === 'https:' ? '443' : '80')
+      } catch {
+        return null
+      }
+    },
+  },
+  mounted() {
+    setTimeout(() => {
+      this.testConnection()
+    }, 1000)
+  },
 }
-
-function getPortFromUrl(url) {
-  try {
-    const urlObj = new URL(url)
-    return urlObj.port || (urlObj.protocol === 'https:' ? '443' : '80')
-  } catch {
-    return null
-  }
-}
-
-// Test connection on mount
-onMounted(() => {
-  setTimeout(() => {
-    testConnection()
-  }, 1000)
-})
 </script>
 
 <style>
