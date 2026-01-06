@@ -110,6 +110,94 @@ app.get("/api/myfiles", (req, res) => {
   }
 });
 
+// NEW: Endpoint for subdirectories
+app.get("/api/myfiles/*", async (req, res) => {
+  try {
+    // Get the relative path after "/api/myfiles/"
+    const relativePath = req.params[0]; // This captures everything after /api/myfiles/
+
+    // Security: Prevent directory traversal
+    const normalizedPath = path.normalize(relativePath);
+    if (normalizedPath.includes("..") || path.isAbsolute(normalizedPath)) {
+      return res.status(400).json({ error: "Invalid path" });
+    }
+
+    const fullPath = path.join(CONFIG.basePath, normalizedPath);
+
+    // Verify path is within base directory
+    const basePathResolved = path.resolve(CONFIG.basePath);
+    const fullPathResolved = path.resolve(fullPath);
+
+    if (!fullPathResolved.startsWith(basePathResolved)) {
+      return res.status(400).json({ error: "Invalid path" });
+    }
+
+    // Check if path exists and is a directory
+    try {
+      const stats = await fs.promises.stat(fullPath);
+      if (!stats.isDirectory()) {
+        return res.status(400).json({ error: "Path is not a directory" });
+      }
+    } catch (err) {
+      if (err.code === "ENOENT") {
+        return res.status(404).json({ error: "Directory not found" });
+      }
+      throw err;
+    }
+
+    const files = await fs.promises.readdir(fullPath);
+
+    const filePromises = files.map(async (file) => {
+      try {
+        const filePath = path.join(fullPath, file);
+        const stats = await fs.promises.stat(filePath);
+        const encodedFile = encodeURIComponent(file);
+
+        // Build relative path for this file/directory
+        const fileRelativePath = normalizedPath
+          ? `${normalizedPath}/${encodedFile}`
+          : encodedFile;
+
+        return {
+          name: file,
+          path: `/api/myfiles/${fileRelativePath}`,
+          url: `http://${req.headers.host}/api/myfiles/${fileRelativePath}`,
+          size: stats.size,
+          sizeFormatted: formatBytes(stats.size),
+          lastModified: stats.mtime,
+          isDirectory: stats.isDirectory(),
+        };
+      } catch (e) {
+        console.error(`Error processing ${file}:`, e.message);
+        return null;
+      }
+    });
+
+    const fileList = (await Promise.all(filePromises)).filter(Boolean);
+
+    // Add parent directory navigation (except for root)
+    let parentPath = null;
+    if (normalizedPath) {
+      const dirName = path.dirname(normalizedPath);
+      parentPath =
+        dirName === "."
+          ? "/api/myfiles"
+          : `/api/myfiles/${encodeURIComponent(dirName)}`;
+    }
+
+    res.json({
+      folder: fullPath,
+      currentPath: normalizedPath,
+      parent: parentPath,
+      totalFiles: fileList.length,
+      files: fileList,
+    });
+  } catch (error) {
+    console.error("Error in directory listing:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // API to serve a specific file
 app.get("/api/myfiles/:filename", (req, res) => {
   try {
