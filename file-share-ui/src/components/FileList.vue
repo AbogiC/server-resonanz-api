@@ -107,9 +107,11 @@
               <span class="icon">{{ getFileIcon(file.name) }}</span>
             </div>
             <div class="file-actions">
-              <button @click.stop="downloadFile(file)" class="action-btn" title="Download">
-                ⬇️
-              </button>
+              <div v-if="file.isDirectory === false">
+                <button @click.stop="downloadFile(file)" class="action-btn" title="Download">
+                  ⬇️
+                </button>
+              </div>
             </div>
           </div>
 
@@ -123,11 +125,20 @@
             </p>
           </div>
 
-          <div class="file-card-footer">
-            <div class="file-type">
-              {{ getFileType(file.name) }}
+          <!-- Footer with file type and preview button -->
+          <div v-if="file.isDirectory === false">
+            <div class="file-card-footer">
+              <div class="file-type">
+                {{ getFileType(file.name) }}
+              </div>
+              <button @click.stop="openPreview(file)" class="preview-btn">👁️ Preview</button>
             </div>
-            <button @click.stop="openPreview(file)" class="preview-btn">👁️ Preview</button>
+          </div>
+          <div v-else>
+            <div class="file-card-footer">
+              <div class="file-type">Directory</div>
+              <button @click.stop="updateDirectory(file.name)" class="preview-btn">-></button>
+            </div>
           </div>
         </div>
       </div>
@@ -255,6 +266,8 @@ export default {
       sortField: 'name',
       sortDirection: 'asc',
       folderPath: '',
+      newDirectory: '',
+      returnDirectory: '',
     }
   },
   computed: {
@@ -290,12 +303,18 @@ export default {
     },
   },
   methods: {
-    async fetchFiles() {
+    async fetchFiles(newDirectory) {
       this.loading = true
       this.error = null
 
       try {
-        const response = await axios.get(`${this.apiUrl}/myfiles`)
+        let response
+        console.log('Fetching files from directory:', newDirectory)
+        if (newDirectory === '') {
+          response = await axios.get(`${this.apiUrl}/myfiles`)
+        } else {
+          response = await axios.get(`${this.apiUrl}/myfiles/${newDirectory}`)
+        }
 
         if (response.data && response.data.files) {
           this.files = response.data.files
@@ -311,8 +330,12 @@ export default {
         this.loading = false
       }
     },
+    updateDirectory(newDirectory) {
+      this.newDirectory = this.newDirectory + newDirectory + '/'
+      this.fetchFiles(this.newDirectory)
+    },
     refreshFiles() {
-      this.fetchFiles()
+      this.fetchFiles(newDirectory)
     },
     sortBy(field) {
       if (this.sortField === field) {
@@ -411,18 +434,18 @@ export default {
     },
   },
   mounted() {
-    this.fetchFiles()
+    this.fetchFiles('')
 
     // Auto-refresh every 30 seconds
-    setInterval(() => {
-      if (!this.previewVisible) {
-        this.fetchFiles()
-      }
-    }, 30000)
+    // setInterval(() => {
+    //   if (!this.previewVisible) {
+    //     this.fetchFiles('')
+    //   }
+    // }, 30000)
   },
   watch: {
     apiUrl() {
-      this.fetchFiles()
+      this.fetchFiles('')
     },
   },
 }
@@ -530,9 +553,7 @@ export default {
   border-radius: 10px;
   cursor: pointer;
   font-weight: 500;
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .btn-refresh:hover:not(:disabled) {

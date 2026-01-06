@@ -119,7 +119,7 @@ export default {
   computed: {
     fileUrl() {
       if (!this.currentFile) return ''
-      return `${this.apiBaseUrl}/myfiles/${encodeURIComponent(this.currentFile.name)}`
+      return `${this.currentFile.url}`
     },
     currentIndex() {
       return this.files.findIndex((f) => f.name === (this.currentFile && this.currentFile.name))

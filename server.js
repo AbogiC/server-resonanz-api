@@ -85,7 +85,7 @@ app.get("/api/myfiles", (req, res) => {
             return {
               name: file,
               path: `/api/myfiles/${encodeURIComponent(file)}`,
-              url: `http://${req.headers.host}/api/myfiles/${encodeURIComponent(
+              url: `http://${req.headers.host}/api/myfiles-open/${encodeURIComponent(
                 file,
               )}`,
               size: stats.size,
@@ -161,7 +161,7 @@ app.get("/api/myfiles/*", async (req, res) => {
         return {
           name: file,
           path: `/api/myfiles/${fileRelativePath}`,
-          url: `http://${req.headers.host}/api/myfiles/${fileRelativePath}`,
+          url: `http://${req.headers.host}/api/myfiles-open/${fileRelativePath}`,
           size: stats.size,
           sizeFormatted: formatBytes(stats.size),
           lastModified: stats.mtime,
@@ -198,10 +198,17 @@ app.get("/api/myfiles/*", async (req, res) => {
   }
 });
 
-// API to serve a specific file
-app.get("/api/myfiles/:filename", (req, res) => {
+// Use * instead of :filename to capture everything after /api/myfiles-open/
+app.get("/api/myfiles-open/*", (req, res) => {
   try {
-    const filename = decodeURIComponent(req.params.filename);
+    // Get the full path after /api/myfiles-open/
+    const filePathFromUrl = req.params[0]; // This captures "add/BOB-CHILCOTT_A-Litle-Jazz-Mass.pdf"
+
+    if (!filePathFromUrl) {
+      return res.status(400).json({ error: "No filename provided" });
+    }
+
+    const filename = decodeURIComponent(filePathFromUrl);
     const filePath = path.join(CONFIG.basePath, filename);
 
     // Security check: prevent directory traversal
@@ -264,9 +271,15 @@ app.get("/api/myfiles/:filename", (req, res) => {
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     };
 
+    // Use the actual filename (not the full path) for Content-Disposition
+    const actualFilename = path.basename(filename);
+
     res.setHeader("Content-Type", mimeTypes[ext] || "application/octet-stream");
     res.setHeader("Content-Length", stats.size);
-    res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${actualFilename}"`,
+    );
     res.setHeader("Cache-Control", "public, max-age=3600"); // Cache for 1 hour
 
     // Stream the file
