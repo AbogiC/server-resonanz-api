@@ -309,7 +309,6 @@ export default {
 
       try {
         let response
-        console.log('Fetching files from directory:', newDirectory)
         if (newDirectory === '') {
           response = await axios.get(`${this.apiUrl}/myfiles`)
         } else {
@@ -335,7 +334,7 @@ export default {
       this.fetchFiles(this.newDirectory)
     },
     refreshFiles() {
-      this.fetchFiles(newDirectory)
+      this.fetchFiles(this.newDirectory)
     },
     sortBy(field) {
       if (this.sortField === field) {
@@ -434,18 +433,18 @@ export default {
     },
   },
   mounted() {
-    this.fetchFiles('')
+    this.fetchFiles(this.newDirectory)
 
     // Auto-refresh every 30 seconds
-    // setInterval(() => {
-    //   if (!this.previewVisible) {
-    //     this.fetchFiles('')
-    //   }
-    // }, 30000)
+    setInterval(() => {
+      if (!this.previewVisible) {
+        this.fetchFiles(this.newDirectory)
+      }
+    }, 30000)
   },
   watch: {
     apiUrl() {
-      this.fetchFiles('')
+      this.fetchFiles(this.newDirectory)
     },
   },
 }
