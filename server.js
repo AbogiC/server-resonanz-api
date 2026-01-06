@@ -86,7 +86,7 @@ app.get("/api/myfiles", (req, res) => {
               name: file,
               path: `/api/myfiles/${encodeURIComponent(file)}`,
               url: `http://${req.headers.host}/api/myfiles/${encodeURIComponent(
-                file
+                file,
               )}`,
               size: stats.size,
               sizeFormatted: formatBytes(stats.size),
@@ -645,7 +645,7 @@ const server = app.listen(PORT, CONFIG.host, () => {
   console.log("\n🔧 API ENDPOINTS:");
   console.log("   List files: http://localhost:" + PORT + "/api/myfiles");
   console.log(
-    "   File:       http://localhost:" + PORT + "/api/myfiles/{filename}"
+    "   File:       http://localhost:" + PORT + "/api/myfiles/{filename}",
   );
   console.log("   Browse:     http://localhost:" + PORT + "/api/browse/");
   console.log("   Server info: http://localhost:" + PORT + "/api/info");
