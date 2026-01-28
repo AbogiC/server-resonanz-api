@@ -7,6 +7,10 @@
         <p class="subtitle">{{ apiUrl }} | {{ files.length }} files</p>
       </div>
 
+      <div v-if="newDirectory" class="floating-back-button">
+        <button @click="returnFolderDirectory()" class="btn-refresh">Back</button>
+      </div>
+
       <div class="header-actions">
         <div class="search-box">
           <input
@@ -137,7 +141,7 @@
           <div v-else>
             <div class="file-card-footer">
               <div class="file-type">Directory</div>
-              <button @click.stop="updateDirectory(file.name)" class="preview-btn">-></button>
+              <button @click.stop="updateDirectory(file.name)" class="preview-btn">📂 Open</button>
             </div>
           </div>
         </div>
@@ -197,13 +201,20 @@
                 {{ getFileType(file.name) }}
               </td>
               <td class="file-actions-cell">
-                <div class="action-buttons">
+                <div v-if="file.isDirectory === false" class="action-buttons">
                   <button @click.stop="openPreview(file)" class="btn-preview" title="Preview">
                     👁️
                   </button>
                   <button @click.stop="downloadFile(file)" class="btn-download" title="Download">
                     ⬇️
                   </button>
+                </div>
+                <div v-else>
+                  <div class="file-card-footer">
+                    <button @click.stop="updateDirectory(file.name)" class="preview-btn">
+                      📂 Open
+                    </button>
+                  </div>
                 </div>
               </td>
             </tr>
@@ -267,7 +278,6 @@ export default {
       sortDirection: 'asc',
       folderPath: '',
       newDirectory: '',
-      returnDirectory: '',
     }
   },
   computed: {
@@ -332,6 +342,17 @@ export default {
     updateDirectory(newDirectory) {
       this.newDirectory = this.newDirectory + newDirectory + '/'
       this.fetchFiles(this.newDirectory)
+    },
+    returnFolderDirectory() {
+      const path = this.newDirectory
+      console.log('Current path:', path)
+      const result = path.substring(0, path.lastIndexOf('/', path.length - 2) + 1)
+      if (result === path) {
+        result = ''
+      }
+      this.newDirectory = result
+      console.log('Return to folder:', result)
+      this.fetchFiles(result)
     },
     refreshFiles() {
       this.fetchFiles(this.newDirectory)
@@ -987,6 +1008,13 @@ export default {
   .stat-item {
     flex: 1 0 calc(50% - 20px);
   }
+}
+
+.floating-back-button {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 1000;
 }
 
 @media (max-width: 480px) {

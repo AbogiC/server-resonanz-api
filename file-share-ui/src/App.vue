@@ -87,7 +87,7 @@ export default {
   },
   data() {
     return {
-      apiUrl: 'http://localhost:3000/api',
+      apiUrl: 'http://192.168.18.32:3000/api',
       connectionStatus: null,
       serverInfo: null,
     }
